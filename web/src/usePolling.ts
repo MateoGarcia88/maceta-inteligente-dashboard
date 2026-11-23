@@ -25,9 +25,10 @@ export interface PollingResult<T> extends PollingState<T> {
   retry: () => void
 }
 
+/** `intervalMs: null` = pedir una sola vez (al montar y con `retry`), sin repetir. */
 export function usePolling<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
-  intervalMs: number,
+  intervalMs: number | null,
 ): PollingResult<T> {
   const [state, setState] = useState<PollingState<T>>({
     data: undefined,
@@ -68,7 +69,8 @@ export function usePolling<T>(
     }
 
     void tick()
-    const id = setInterval(tick, intervalMs)
+    // clearInterval(undefined) no hace nada, así que la limpieza sirve para ambos casos.
+    const id = intervalMs === null ? undefined : setInterval(tick, intervalMs)
 
     // Limpieza: React la llama al desmontar y antes de volver a ejecutar el efecto.
     return () => {

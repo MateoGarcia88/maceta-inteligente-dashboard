@@ -393,3 +393,53 @@ const pageCount = Math.max(1, Math.ceil(sorted.length / 10))
 const current = Math.min(page, pageCount - 1)          // derivado, no sincronizado
 const visible = sorted.slice(current * 10, current * 10 + 10)
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 6b: filtro Desde/Hasta (solo la tabla)
+
+### Qué se hizo
+- `time.ts`: `toBogotaInputValue(ms)` → "2026-11-22T12:35" y `bogotaInputToApi(v)` → añade `-05:00`.
+- `usePolling(fetcher, null)`: con `null` pide una sola vez (y con `retry`), sin intervalo.
+- `components/RangeFilter.tsx`: dos `datetime-local` controlados + Aplicar (submit) + Restablecer.
+- `components/ReadingsPanel.tsx`: tarjeta "Lecturas". Sin filtro usa las 24 h en vivo; con filtro
+  monta `<FilteredReadings key={from|to}>`, que pide ese rango una vez. Aviso si `truncated`.
+- `components/PollSection.tsx`: movido desde `App.tsx` porque ahora lo usan dos archivos.
+
+### Por qué así
+- **Valores del filtro en el padre (componente controlado).** Al aplicar, la tabla cambia de rama
+  (`ReadingsBody` dentro de `FilteredReadings` en vez de directo) y React vuelve a montar lo que hay
+  debajo, incluido el filtro. Si los inputs guardaran su estado, se borrarían.
+- **`null` = "no tocado"**: mientras el usuario no escribe, los campos muestran las últimas 24 h
+  calculadas de los datos (y se mueven con ellos). Sin `useEffect` para "precargar".
+- **`key` para reiniciar.** Cada rango aplicado es un componente nuevo: estado, error y página de
+  la tabla empiezan de cero. Sin `key`, se vería un instante la respuesta del rango anterior.
+- **Validar en el cliente** (`desde ≤ hasta`, campos completos): mensaje inmediato y sin petición.
+  El texto "AAAA-MM-DDTHH:mm" se puede comparar como string porque los campos van de mayor a menor.
+- **Sin poll con filtro**: un rango cerrado no cambia (salvo si incluye el futuro).
+
+### Cómo se probó
+- 06:00–08:00 → URL con `-05%3A00`, 25 lecturas (cada 5 min, extremos incluidos), primera fila 08:00.
+- Desde > Hasta → mensaje de validación, la tabla no cambia.
+- Enero de 2025 → "0 lecturas en el rango" + estado vacío; los gráficos siguen con las 24 h.
+- Restablecer → vuelve a las 24 h en vivo con los campos actualizados.
+- `truncated`: la API solo tenía 3 356 lecturas (< 5000); se forzó con un `fetch` falso.
+
+### Conceptos nuevos
+**Componente controlado vs. no controlado.** Controlado: `value` + `onChange`, el estado vive en
+React (en el padre, si hace falta que sobreviva). No controlado: el DOM guarda el valor.
+
+**Identidad de componentes y `key`.** React conserva el estado si en la misma posición del árbol
+hay el mismo tipo de componente con la misma `key`. Cambiar el tipo (otra rama) o la `key` = montar
+de nuevo con estado inicial. Es la forma idiomática de "resetear" un componente.
+
+**`<form onSubmit>` + `preventDefault()`.** Enter dentro de un campo aplica el filtro; sin
+`preventDefault`, el navegador recargaría la página.
+
+### Ejemplo mínimo
+```tsx
+const [applied, setApplied] = useState<Range | null>(null)
+return applied
+  ? <Filtered key={`${applied.from}|${applied.to}`} range={applied} />   // estado nuevo por rango
+  : <Live />
+```
