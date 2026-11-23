@@ -124,3 +124,57 @@ interface ImportMetaEnv { readonly VITE_API_URL?: string }
 // cualquier archivo
 const url = import.meta.env.VITE_API_URL // string | undefined
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 1: tarjetas con la última lectura
+
+### Qué se hizo
+| Archivo | Responsabilidad |
+|---|---|
+| `src/types.ts` | Contrato de la API (`Reading`, `ApiErrorBody`). |
+| `src/api.ts` | `fetchLatest(signal)` y la clase `ApiError(code, status, message)`. 503 `NO_DATA` → `null`. |
+| `src/usePolling.ts` | Hook: pide al montar y cada `REFRESH_MS`; devuelve `{ data, error, lastUpdated }`. |
+| `src/time.ts` | `formatBogota(iso)` → "22 nov 2026, 12:35". |
+| `src/format.ts` | `formatNumber(12790)` → "12 790"; `formatNumber(75.7, 1)` → "75,7". |
+| `src/components/LatestCards.tsx` | Tarjetas de humedad y luz. |
+| `src/App.tsx` | Sin `VITE_API_URL` no monta `Dashboard`; la cabecera muestra `deviceId` y la hora de la lectura. |
+
+### Por qué así
+- **Un solo tipo de error (`ApiError`)**: los componentes no distinguen entre "fetch rechazó",
+  "HTTP 500" o "JSON raro"; leen `code` y `message`. `status: 0` = no hubo respuesta.
+- **`NO_DATA` como `null`, no como error**: "todavía no hay lecturas" es un estado normal.
+- **`data: undefined` vs `null`**: `undefined` = aún no llegó nada (cargando); `null` = la API
+  respondió que no hay datos. Dos estados distintos, dos valores distintos.
+- **`formatToParts`**: `es-CO` da "22 de nov de 2026" y "12.790"; se toman las piezas y se
+  arman como en el mockup, sin parsear strings.
+
+### Conceptos nuevos
+**Limpieza de efectos.** La función que devuelve `useEffect` se ejecuta al desmontar y antes de
+volver a correr el efecto. Ahí se hace `clearInterval` y `controller.abort()`; si no, quedan
+intervalos huérfanos que siguen haciendo `setState`.
+
+**StrictMode monta dos veces en desarrollo.** React monta, desmonta y vuelve a montar cada
+componente para destapar efectos sin limpieza. Por eso en la pestaña Network verás dos peticiones
+al cargar: la primera aparece cancelada. En producción ocurre una sola vez.
+
+**`AbortController`.** `fetch(url, { signal })` se cancela con `controller.abort()`; la promesa
+rechaza con `AbortError`. Se comprueba `signal.aborted` para no mostrar eso como error.
+
+**Dependencias del efecto y referencias estables.** `usePolling(fetcher, …)` reinicia el efecto si
+cambia `fetcher`. Una función de módulo (`fetchLatest`) es siempre la misma referencia; una flecha
+escrita dentro del componente sería nueva en cada render (habrá que usar `useCallback`).
+
+**`setState(prev => …)`.** Dentro de un callback asíncrono, `state` puede estar desactualizado
+(closure viejo). La forma funcional siempre recibe el estado más reciente.
+
+### Ejemplo mínimo
+```ts
+useEffect(() => {
+  const controller = new AbortController()
+  const tick = () => fetch(url, { signal: controller.signal }).then((r) => r.json()).then(setData)
+  tick()
+  const id = setInterval(tick, 30_000)
+  return () => { controller.abort(); clearInterval(id) }
+}, [])
+```
