@@ -226,3 +226,34 @@ d3). Para una app de una sola pantalla no importa; se podría dividir con `impor
   </LineChart>
 </ResponsiveContainer>
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 3: gráfico de luz
+
+### Qué se hizo
+- `App.tsx`: segundo `<ReadingsChart field="light" … yStep={5000} />` con los mismos datos de 24 h
+  (una sola petición alimenta los dos gráficos).
+- `ReadingsChart.tsx`: prop `yStep`. El eje Y va de 0 al máximo de los datos redondeado hacia
+  arriba a un múltiplo del paso, con un tick por paso (`stepAxis`).
+
+### Por qué así
+- **Reutilizar el componente** que se hizo genérico en la etapa 2: la etapa costó un `<ReadingsChart>` más.
+- **`yStep` en vez de `domain={[0, 'auto']}`**: lo probé primero; Recharts eligió ticks de 3 500 en
+  3 500 (0, 3 500, 7 000…), correctos pero difíciles de leer. Con el paso fijo salen 0, 5 000, 10 000…
+- **Mínimo 0 siempre**: de noche la luz es 0 y la línea debe quedar sobre el eje, no flotando.
+- **Al menos un paso de alto**: si todas las lecturas valen 0 (24 h nubladas o un sensor tapado),
+  `max` sería 0 y el eje quedaría sin altura.
+
+### Conceptos nuevos
+**"Nice numbers" en ejes.** Los algoritmos automáticos reparten el rango en N ticks y redondean,
+pero no saben qué unidades son "naturales" para el lector. Si conoces la magnitud, fija el paso.
+
+**Una petición, varias vistas.** Los dos gráficos derivan del mismo `history.data`; no hace falta
+pedir dos veces lo mismo ni sincronizar dos estados.
+
+### Ejemplo mínimo
+```ts
+// 12 790 con paso 5000 → dominio [0, 15000], ticks [0, 5000, 10000, 15000]
+const max = Math.max(step, Math.ceil(Math.max(0, ...values) / step) * step)
+```

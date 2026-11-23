@@ -46,16 +46,27 @@ function Dashboard() {
         {history.data === undefined && !history.error && <p>Cargando lecturas…</p>}
         {history.error && <p role="alert">{history.error.message}</p>}
         {history.data && (
-          <ReadingsChart
-            readings={history.data.readings}
-            field="soilMoisture"
-            title="Humedad del sustrato (%)"
-            unit="%"
-            color="#2f6fbf"
-            decimals={1}
-            yDomain={[0, 100]}
-            yTicks={[0, 25, 50, 75, 100]}
-          />
+          <div className="charts">
+            <ReadingsChart
+              readings={history.data.readings}
+              field="soilMoisture"
+              title="Humedad del sustrato (%)"
+              unit="%"
+              color="#2f6fbf"
+              decimals={1}
+              yDomain={[0, 100]}
+              yTicks={[0, 25, 50, 75, 100]}
+            />
+            {/* De 0 (la noche queda sobre el eje) al máximo redondeado a 5000. */}
+            <ReadingsChart
+              readings={history.data.readings}
+              field="light"
+              title="Luz (lx)"
+              unit="lx"
+              color="#b8860b"
+              yStep={5000}
+            />
+          </div>
         )}
       </section>
     </main>

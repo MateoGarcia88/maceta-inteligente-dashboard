@@ -13,13 +13,37 @@ interface Props {
   color: string
   /** Decimales en el tooltip. */
   decimals?: number
-  /** Rango fijo del eje Y; sin él, Recharts lo calcula a partir de los datos. */
+  /** Rango fijo del eje Y (p. ej. [0, 100] para %). Tiene prioridad sobre `yStep`. */
   yDomain?: [number, number]
   yTicks?: number[]
+  /**
+   * Sin rango fijo: el eje va de 0 al máximo de los datos redondeado hacia arriba a un
+   * múltiplo de `yStep`, con un tick por paso (con 5000: 0, 5000, 10 000…).
+   */
+  yStep?: number
+}
+
+/** Dominio y ticks del eje Y a partir del máximo de los datos y un paso. */
+function stepAxis(values: number[], step: number): { domain: [number, number]; ticks: number[] } {
+  // Con todo en 0 (de noche) el máximo sería 0: se deja al menos un paso de alto.
+  const max = Math.max(step, Math.ceil(Math.max(0, ...values) / step) * step)
+  const ticks: number[] = []
+  for (let v = 0; v <= max; v += step) ticks.push(v)
+  return { domain: [0, max], ticks }
 }
 
 /** Serie de tiempo de un campo de las lecturas. Se usa igual para humedad y para luz. */
-export function ReadingsChart({ readings, field, title, unit, color, decimals = 0, yDomain, yTicks }: Props) {
+export function ReadingsChart({
+  readings,
+  field,
+  title,
+  unit,
+  color,
+  decimals = 0,
+  yDomain,
+  yTicks,
+  yStep,
+}: Props) {
   // Recharts necesita un eje X numérico para espaciar los puntos según el tiempo real
   // (con strings, los pondría equidistantes aunque faltaran lecturas).
   const data = useMemo(
@@ -30,6 +54,11 @@ export function ReadingsChart({ readings, field, title, unit, color, decimals = 
     () => (data.length > 0 ? hourTicks(data[0]!.t, data[data.length - 1]!.t, 4) : []),
     [data],
   )
+  const yAxis = useMemo(() => {
+    if (yDomain) return { domain: yDomain, ticks: yTicks }
+    if (yStep) return stepAxis(data.map((d) => d.value), yStep)
+    return { domain: undefined, ticks: yTicks }
+  }, [data, yDomain, yTicks, yStep])
 
   return (
     <article className="card chart">
@@ -46,8 +75,8 @@ export function ReadingsChart({ readings, field, title, unit, color, decimals = 
             tickFormatter={formatBogotaTime}
           />
           <YAxis
-            domain={yDomain ?? ['auto', 'auto']}
-            ticks={yTicks}
+            domain={yAxis.domain ?? ['auto', 'auto']}
+            ticks={yAxis.ticks}
             tickFormatter={(v: number) => formatNumber(v)}
             width={56}
           />

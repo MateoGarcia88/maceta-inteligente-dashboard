@@ -84,6 +84,11 @@ body {
   font-size: 1.25rem;
 }
 
+.charts {
+  display: grid;
+  gap: 16px;
+}
+
 .chart__title {
   margin: 0 0 12px;
   font-size: 0.95rem;
