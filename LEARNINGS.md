@@ -349,3 +349,47 @@ pisarían, conservando el primero y el último. Funciona también con `ticks` ca
 .metric--moisture .metric__label::before { background: var(--color-moisture); }
 .metric__value { font-size: clamp(2.75rem, 7vw, 3.5rem); font-variant-numeric: tabular-nums; }
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 6a: tabla de lecturas con orden y paginación
+
+### Qué se hizo
+- `components/ReadingsTable.tsx`: columnas Fecha y hora · Humedad (%) · Luz (lx), definidas en un
+  arreglo `COLUMNS` (etiqueta, si es numérica y cómo se muestra). Orden por clic en el encabezado
+  (`aria-sort`, flecha ↓/↑), por defecto fecha descendente. Paginación de 10 en 10 con
+  "Mostrando 1–10 de 289", Anterior / "Página x de y" / Siguiente.
+- `App.tsx`: tarjeta "Lecturas" con "N lecturas en el rango"; por ahora usa las mismas 24 h.
+- `styles.css`: tabla con cifras alineadas a la derecha y scroll horizontal dentro de la tarjeta en móvil.
+
+### Por qué así
+- **Columnas como datos**: el encabezado y las filas se generan del mismo arreglo; añadir una
+  columna es una línea.
+- **Ordenar una copia** (`[...readings].sort()`): `sort` modifica el arreglo y `readings` viene de props.
+- **Página derivada** (`current = Math.min(page, pageCount - 1)`) en vez de un `useEffect` que
+  "corrija" `page` cuando cambian los datos: menos estado, sin render extra.
+- **Botones dentro de `<th>`**: el orden se puede usar con teclado (Tab + Enter).
+
+### Errores que aparecieron al probar
+- **Clics rápidos perdidos.** `setPage(current + 1)` usa el `current` del último render; 40 clics
+  seguidos avanzaban una sola página. Solución: `setPage((p) => p + 1)` (con límites).
+- **Especificidad CSS.** `.table td { text-align: left }` (0,1,1) ganaba a `.table__num { text-align:
+  right }` (0,1,0). Solución: `.table .table__num` (0,2,0).
+- **Error viejo en la consola.** Tras editar `App.tsx` en dos pasos (uso y luego import), HMR cargó
+  el estado intermedio y dejó un `ReferenceError` en el log; la página ya estaba bien. En una pestaña
+  nueva, consola limpia. Lección: mirar la marca `?t=` del módulo antes de perseguir un error.
+
+### Conceptos nuevos
+**Especificidad.** Se cuenta (ids, clases/atributos/pseudoclases, elementos). Gana el número mayor
+comparando de izquierda a derecha; si empatan, gana la regla que va después.
+
+**`aria-sort`.** En el `<th>`: `ascending`, `descending` o `none`. Los lectores de pantalla lo
+anuncian; la flecha visual es `aria-hidden` para no leerla dos veces.
+
+### Ejemplo mínimo
+```ts
+const sorted = useMemo(() => [...rows].sort((a, b) => dir * (a[key] - b[key])), [rows, key, dir])
+const pageCount = Math.max(1, Math.ceil(sorted.length / 10))
+const current = Math.min(page, pageCount - 1)          // derivado, no sincronizado
+const visible = sorted.slice(current * 10, current * 10 + 10)
+```

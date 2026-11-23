@@ -222,6 +222,110 @@ h3 {
   white-space: nowrap;
 }
 
+/* ───────────────────────────── Lecturas (tabla) ───────────────────────────── */
+.readings {
+  margin-top: 40px;
+}
+
+.readings__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Dentro de la tarjeta de lecturas, los estados no llevan su propia tarjeta. */
+.readings .status {
+  border: none;
+  margin-top: 0;
+  padding: 8px 0 0;
+}
+
+.readings__count {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+/* La tabla hace scroll dentro de la tarjeta si no cabe, no la página entera. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 440px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  border-bottom-color: var(--color-text);
+  border-bottom-width: 1px;
+}
+
+/* `.table .table__num` (0,2,0) gana a `.table td` (0,1,1); `.table__num` solo (0,1,0) perdería. */
+.table .table__num {
+  text-align: right;
+}
+
+.table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
+
+.table__sort:focus-visible {
+  outline: 2px solid var(--color-moisture);
+  outline-offset: 2px;
+}
+
+.table__arrow {
+  display: inline-block;
+  width: 0.8em;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.pager__summary,
+.pager__page {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.pager__page {
+  white-space: nowrap;
+}
+
+.pager__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ───────────────────────────── Estados ───────────────────────────── */
 .status {
   margin-top: 24px;

@@ -2,8 +2,10 @@ import type { ReactNode } from 'react'
 import { fetchLatest, fetchReadings } from './api.ts'
 import { LatestCards } from './components/LatestCards.tsx'
 import { ReadingsChart } from './components/ReadingsChart.tsx'
+import { ReadingsTable } from './components/ReadingsTable.tsx'
 import { StatusMessage } from './components/StatusMessage.tsx'
 import { CONFIG_ERROR, REFRESH_MS } from './config.ts'
+import { formatNumber } from './format.ts'
 import { formatBogota, formatBogotaTime } from './time.ts'
 import type { Reading } from './types.ts'
 import { usePolling, type PollingResult } from './usePolling.ts'
@@ -92,6 +94,23 @@ function Dashboard() {
                 />
               </div>
             )}
+          </PollSection>
+        </section>
+
+        {/* Por ahora, las mismas 24 h de los gráficos; el filtro Desde/Hasta llega en la etapa 6b. */}
+        <section className="card readings" aria-labelledby="readings-title">
+          <header className="readings__header">
+            <h2 id="readings-title" className="section-title">
+              Lecturas
+            </h2>
+            {history.data && (
+              <span className="readings__count">
+                {formatNumber(history.data.count)} lecturas en el rango
+              </span>
+            )}
+          </header>
+          <PollSection poll={history} isEmpty={(h) => h.count === 0} onRetry={retryAll}>
+            {(h) => <ReadingsTable readings={h.readings} />}
           </PollSection>
         </section>
       </>
