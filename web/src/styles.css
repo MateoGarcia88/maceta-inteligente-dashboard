@@ -1,4 +1,33 @@
-/* Estilos base. Los tokens y el detalle del mockup llegan en la etapa 5. */
+/* ───────────────────────────── Tokens (mockup) ───────────────────────────── */
+:root {
+  --color-bg: #f4f4f0;
+  --color-surface: #ffffff;
+  --color-border: #e6e6e0;
+  --color-text: #1a1a1a;
+  --color-muted: #6b6b66;
+  --color-subtle: #e8e8e2;
+  --color-moisture: #2f6fbf;
+  --color-light: #b8860b;
+  --color-success: #2e7d4f;
+  --color-danger: #b42318;
+  --color-warning-bg: #fdf1e7;
+  --color-warning-text: #7a3e10;
+
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', var(--font-body);
+
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --space-page: 16px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --space-page: 32px;
+  }
+}
+
+/* ───────────────────────────── Base ───────────────────────────── */
 *,
 *::before,
 *::after {
@@ -7,76 +36,154 @@
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #f4f4f0;
-  color: #1a1a1a;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .page {
-  max-width: 1100px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 16px;
+  padding: 32px var(--space-page) 64px;
 }
 
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 20px 24px;
+}
+
+/* ───────────────────────────── Cabecera ───────────────────────────── */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 16px;
+  gap: 12px 24px;
   flex-wrap: wrap;
 }
 
-.header__title {
+.header__device {
   margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.header__title {
+  margin: 4px 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+}
+
+.header__subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.header__status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .badge {
-  border: 1px solid currentColor;
+  border: 1px solid var(--color-text);
   border-radius: 999px;
-  padding: 2px 10px;
+  padding: 3px 12px;
   font-size: 0.8rem;
+  font-weight: 500;
 }
 
-.header__device,
-.header__subtitle {
-  margin: 4px 0;
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.85rem;
-  color: #555;
+  color: var(--color-muted);
 }
 
-.card {
-  background: #fff;
-  border: 1px solid #e4e4de;
-  border-radius: 12px;
-  padding: 20px 24px;
+.connection::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
+.connection--connected::before {
+  background: var(--color-success);
+}
+
+.connection--offline::before {
+  background: var(--color-danger);
+}
+
+/* ───────────────────────────── Tarjetas de la última lectura ───────────────────────────── */
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
   margin-top: 24px;
 }
 
 .metric__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* El punto de color que identifica la serie (mismo color que su gráfico). */
+.metric__label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.metric--moisture .metric__label::before {
+  background: var(--color-moisture);
+}
+
+.metric--light .metric__label::before {
+  background: var(--color-light);
 }
 
 .metric__value {
-  margin: 8px 0 0;
-  font-size: 3rem;
-  font-weight: 700;
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 7vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  /* Cifras del mismo ancho: el número no "baila" al actualizarse. */
+  font-variant-numeric: tabular-nums;
 }
 
 .metric__unit {
-  margin-left: 4px;
+  margin-left: 6px;
   font-size: 1.25rem;
-  font-weight: 400;
+  font-weight: 500;
+  color: var(--color-muted);
 }
 
+/* ───────────────────────────── Histórico ───────────────────────────── */
 .history {
-  margin-top: 32px;
+  margin-top: 40px;
 }
 
 .section-title {
@@ -89,70 +196,69 @@ body {
   gap: 16px;
 }
 
-.chart__title {
-  margin: 0 0 12px;
-  font-size: 0.95rem;
-}
-
 .chart {
-  font-size: 0.8rem;
+  padding: 20px 16px 12px 8px;
 }
 
-.header__status {
+.chart__header {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 8px 0 16px;
+  margin-bottom: 12px;
 }
 
-.connection {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
+.chart__title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
-.connection::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.chart__subtitle {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  white-space: nowrap;
 }
 
-.connection--connected::before {
-  background: #2e7d4f;
-}
-
-.connection--offline::before {
-  background: #b42318;
-}
-
+/* ───────────────────────────── Estados ───────────────────────────── */
 .status {
   margin-top: 24px;
-  max-width: 420px;
+  padding: 28px 24px;
 }
 
 .status__icon {
   display: block;
-  color: #555;
+  color: var(--color-muted);
 }
 
 .status__icon--error {
-  color: #b42318;
+  color: var(--color-danger);
 }
 
 .status__title {
   margin: 16px 0 8px;
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
 }
 
 .status__text {
+  max-width: 44ch;
   margin: 0 0 20px;
-  color: #555;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+/* En el estado de carga el texto va arriba y en color normal, como en el mockup. */
+.status[aria-busy='true'] .status__text {
+  color: var(--color-text);
+  margin-bottom: 0;
 }
 
 .skeleton {
-  background: #e8e8e2;
-  border-radius: 8px;
+  background: var(--color-subtle);
+  border-radius: var(--radius-control);
   margin-top: 12px;
 }
 
@@ -170,18 +276,46 @@ body {
   height: 96px;
 }
 
+.stale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 10px 16px;
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 0.9rem;
+}
+
+/* ───────────────────────────── Botones ───────────────────────────── */
 .button {
   font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   padding: 10px 20px;
 }
 
 .button--primary {
-  background: #1a1a1a;
+  background: var(--color-text);
   color: #fff;
-  border: 1px solid #1a1a1a;
-  font-weight: 600;
+  border: 1px solid var(--color-text);
+}
+
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.button:disabled {
+  cursor: default;
+  background: var(--color-bg);
+  color: var(--color-muted);
+  border-color: var(--color-border);
 }
 
 .button--link {
@@ -192,18 +326,11 @@ body {
   color: inherit;
 }
 
-.stale {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-top: 16px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  background: #fdf1e7;
-  color: #7a3e10;
-  font-size: 0.9rem;
+.button:focus-visible {
+  outline: 2px solid var(--color-moisture);
+  outline-offset: 2px;
 }
 
 .config-error {
-  color: #b42318;
+  color: var(--color-danger);
 }

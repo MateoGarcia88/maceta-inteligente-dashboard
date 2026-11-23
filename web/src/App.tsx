@@ -71,6 +71,8 @@ function Dashboard() {
                   readings={h.readings}
                   field="soilMoisture"
                   title="Humedad del sustrato (%)"
+                  seriesName="Humedad"
+                  subtitle="Últimas 24 horas"
                   unit="%"
                   color="#2f6fbf"
                   decimals={1}
@@ -82,6 +84,8 @@ function Dashboard() {
                   readings={h.readings}
                   field="light"
                   title="Luz (lx)"
+                  seriesName="Luz"
+                  subtitle="Últimas 24 horas"
                   unit="lx"
                   color="#b8860b"
                   yStep={5000}

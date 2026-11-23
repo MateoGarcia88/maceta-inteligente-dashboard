@@ -307,3 +307,45 @@ const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)])
 try { await fetch(url, { signal }) }
 catch (e) { if (e instanceof DOMException && e.name === 'TimeoutError') console.log('tardó demasiado') }
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 5: estilos según el mockup
+
+### Qué se hizo
+- `index.html`: Inter (texto) y Space Grotesk (títulos y cifras) desde Google Fonts.
+- `styles.css` reescrito con **tokens** en `:root` (`--color-*`, `--font-*`, `--radius-*`) y
+  secciones: cabecera, tarjetas, histórico, estados, botones.
+- Tarjetas: punto de color de la serie antes de la etiqueta, cifra grande con `tabular-nums`.
+- `ReadingsChart`: encabezado con "Últimas 24 horas" a la derecha, solo líneas de cuadrícula
+  horizontales, ejes en gris sin marcas, punto en la última lectura (`ReferenceDot`) y tooltip
+  con nombre corto (`seriesName`: "Humedad · 76,5 %" en vez de repetir la unidad).
+- Móvil (375 px): sin scroll horizontal; el eje X omite los ticks que se pisarían.
+
+### Por qué así
+- **Tokens en variables CSS**: un color se cambia en un solo lugar; los nombres dicen el
+  propósito (`--color-moisture`), no el valor (`--blue`).
+- **`clamp(min, preferido, max)`** en el título y las cifras: crecen con el ancho de la pantalla
+  sin media queries.
+- **`ReferenceDot` en vez de `dot={función}`**: marcar un punto concreto por sus coordenadas de
+  datos es más simple que filtrar por índice dentro de una función de render.
+- **Colores de ejes como constantes en TS**: Recharts los escribe como atributos del SVG; se dejan
+  junto al componente en vez de depender de `var()` dentro de atributos.
+
+### Conceptos nuevos
+**`font-variant-numeric: tabular-nums`.** Todas las cifras ocupan el mismo ancho: al cambiar de
+55,5 a 55,6 el número no se mueve horizontalmente.
+
+**`display=swap` y `preconnect`.** `swap` muestra la fuente del sistema mientras carga la web (en
+vez de texto invisible). `preconnect` abre la conexión TLS a Google Fonts antes de necesitarla.
+Sin internet, la página sigue funcionando con la fuente de respaldo.
+
+**`interval="preserveStartEnd"` + `minTickGap`.** Recharts mide los ticks y omite los que se
+pisarían, conservando el primero y el último. Funciona también con `ticks` calculados a mano.
+
+### Ejemplo mínimo
+```css
+:root { --color-moisture: #2f6fbf; }
+.metric--moisture .metric__label::before { background: var(--color-moisture); }
+.metric__value { font-size: clamp(2.75rem, 7vw, 3.5rem); font-variant-numeric: tabular-nums; }
+```
