@@ -98,6 +98,112 @@ body {
   font-size: 0.8rem;
 }
 
+.header__status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.connection::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connection--connected::before {
+  background: #2e7d4f;
+}
+
+.connection--offline::before {
+  background: #b42318;
+}
+
+.status {
+  margin-top: 24px;
+  max-width: 420px;
+}
+
+.status__icon {
+  display: block;
+  color: #555;
+}
+
+.status__icon--error {
+  color: #b42318;
+}
+
+.status__title {
+  margin: 16px 0 8px;
+  font-size: 1.1rem;
+}
+
+.status__text {
+  margin: 0 0 20px;
+  color: #555;
+}
+
+.skeleton {
+  background: #e8e8e2;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.skeleton--line {
+  width: 120px;
+  height: 12px;
+}
+
+.skeleton--block {
+  width: 180px;
+  height: 44px;
+}
+
+.skeleton--chart {
+  height: 96px;
+}
+
+.button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 10px 20px;
+}
+
+.button--primary {
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #1a1a1a;
+  font-weight: 600;
+}
+
+.button--link {
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  color: inherit;
+}
+
+.stale {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #fdf1e7;
+  color: #7a3e10;
+  font-size: 0.9rem;
+}
+
 .config-error {
   color: #b42318;
 }

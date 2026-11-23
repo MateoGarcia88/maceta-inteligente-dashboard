@@ -257,3 +257,53 @@ pedir dos veces lo mismo ni sincronizar dos estados.
 // 12 790 con paso 5000 → dominio [0, 15000], ticks [0, 5000, 10000, 15000]
 const max = Math.max(step, Math.ceil(Math.max(0, ...values) / step) * step)
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 4: estados de carga, error y sin datos
+
+### Qué se hizo
+- `components/StatusMessage.tsx`: los tres estados del mockup (`loading` con skeleton, `error`
+  con Reintentar, `empty`). Iconos como SVG en línea.
+- `usePolling.ts`: `retry()` borra el error y reinicia el efecto (contador `attempt` en las deps).
+- `api.ts`: timeout de 10 s con `AbortSignal.any([signal, AbortSignal.timeout(10_000)])`.
+- `App.tsx`:
+  - Sin nada cargado: **un** mensaje para toda la página (no uno por sección).
+  - `latest === null` (503 `NO_DATA`): estado vacío.
+  - Ya con datos: `PollSection` maneja cada sección; si un refresco falla, se conservan los
+    datos y aparece "No se pudo actualizar. Mostrando datos recibidos a las hh:mm. Reintentar".
+  - Cabecera: punto verde "API conectada" / rojo "Sin conexión".
+
+### Por qué así
+- **Error de red vs. error de la API**: con `status 0` se muestra el texto del mockup ("Comprueba
+  que la API esté encendida…"); si la API respondió 4xx/5xx, se muestra su `message`.
+- **No borrar datos por un fallo puntual**: si un refresco falla, la última lectura válida sigue siendo útil.
+- **Timeout**: lo destapó una prueba. Con un `fetch` colgado, la guarda `inFlight` de `usePolling`
+  impedía lanzar más peticiones y el dashboard se congelaba sin avisar.
+
+### Cómo se probó sin apagar la API
+- **API caída**: una segunda copia del frontend con otra URL. Las variables del proceso ganan a
+  `.env.local`: `$env:VITE_API_URL = 'http://localhost:3999'; bun run dev --port 5180`.
+- **Carga, timeout y vacío**: reemplazando `window.fetch` desde la consola por una promesa que
+  nunca resuelve, o por un `new Response(..., { status: 503 })` falso.
+- **Fallo en un refresco**: `window.fetch = () => Promise.reject(new TypeError())` y esperar 30 s.
+
+### Conceptos nuevos
+**Unión discriminada.** `type Props = { kind: 'loading' } | { kind: 'error'; error; onRetry } | …`.
+Dentro de `case 'error'`, TypeScript sabe que existe `props.onRetry`; en `case 'loading'`, no.
+
+**Render props.** `<PollSection>{(data) => <Chart data={data} />}</PollSection>`: `children` es
+una función, y el componente decide cuándo llamarla (solo cuando hay datos).
+
+**Reiniciar un efecto a propósito.** Un estado que solo está en la lista de dependencias
+(`attempt`) sirve de "botón de reinicio": cambiarlo ejecuta la limpieza y luego el efecto otra vez.
+
+**`AbortSignal.any` / `AbortSignal.timeout`.** Combinan señales: la petición se cancela con la
+primera que se active. El timeout rechaza con un `DOMException` de nombre `TimeoutError`.
+
+### Ejemplo mínimo
+```ts
+const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)])
+try { await fetch(url, { signal }) }
+catch (e) { if (e instanceof DOMException && e.name === 'TimeoutError') console.log('tardó demasiado') }
+```

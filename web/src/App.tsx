@@ -1,17 +1,19 @@
+import type { ReactNode } from 'react'
 import { fetchLatest, fetchReadings } from './api.ts'
 import { LatestCards } from './components/LatestCards.tsx'
 import { ReadingsChart } from './components/ReadingsChart.tsx'
+import { StatusMessage } from './components/StatusMessage.tsx'
 import { CONFIG_ERROR, REFRESH_MS } from './config.ts'
-import { formatBogota } from './time.ts'
+import { formatBogota, formatBogotaTime } from './time.ts'
 import type { Reading } from './types.ts'
-import { usePolling } from './usePolling.ts'
+import { usePolling, type PollingResult } from './usePolling.ts'
 
 export default function App() {
   // Sin URL de la API no se monta Dashboard, así que no se hace ningún fetch.
   if (CONFIG_ERROR) {
     return (
       <main className="page">
-        <Header reading={undefined} />
+        <Header reading={undefined} connection="unknown" />
         <p className="config-error" role="alert">
           {CONFIG_ERROR}
         </p>
@@ -29,51 +31,120 @@ function Dashboard() {
   const latest = usePolling(fetchLatest, REFRESH_MS)
   const history = usePolling(fetchLast24h, REFRESH_MS)
 
+  const error = latest.error ?? history.error
+  const connection: Connection = error ? 'offline' : latest.lastUpdated ? 'connected' : 'unknown'
+  const retryAll = () => {
+    latest.retry()
+    history.retry()
+  }
+
+  // Mientras no haya llegado nada, un único mensaje para toda la página (y no uno por sección).
+  const nothingYet = latest.data === undefined && history.data === undefined
+  let body: ReactNode
+  if (nothingYet) {
+    body = error ? (
+      <StatusMessage kind="error" error={error} onRetry={retryAll} />
+    ) : (
+      <StatusMessage kind="loading" />
+    )
+  } else if (latest.data === null) {
+    // La API respondió que no tiene ninguna lectura: tampoco habrá histórico.
+    body = <StatusMessage kind="empty" />
+  } else {
+    body = (
+      <>
+        {/* Un refresco falló pero hay datos: se conservan y se avisa. */}
+        {error && <StaleNotice lastUpdated={latest.lastUpdated} onRetry={retryAll} />}
+
+        <PollSection poll={latest} isEmpty={(r) => r === null}>
+          {(r) => r && <LatestCards reading={r} />}
+        </PollSection>
+
+        <section className="history" aria-labelledby="history-title">
+          <h2 id="history-title" className="section-title">
+            Histórico
+          </h2>
+          <PollSection poll={history} isEmpty={(h) => h.count === 0} onRetry={retryAll}>
+            {(h) => (
+              <div className="charts">
+                <ReadingsChart
+                  readings={h.readings}
+                  field="soilMoisture"
+                  title="Humedad del sustrato (%)"
+                  unit="%"
+                  color="#2f6fbf"
+                  decimals={1}
+                  yDomain={[0, 100]}
+                  yTicks={[0, 25, 50, 75, 100]}
+                />
+                {/* De 0 (la noche queda sobre el eje) al máximo redondeado a 5000. */}
+                <ReadingsChart
+                  readings={h.readings}
+                  field="light"
+                  title="Luz (lx)"
+                  unit="lx"
+                  color="#b8860b"
+                  yStep={5000}
+                />
+              </div>
+            )}
+          </PollSection>
+        </section>
+      </>
+    )
+  }
+
   return (
     <main className="page">
-      <Header reading={latest.data ?? undefined} />
-
-      {/* Estados mínimos; la etapa 4 los reemplaza por los del mockup. */}
-      {latest.data === undefined && !latest.error && <p>Cargando lecturas…</p>}
-      {latest.error && <p role="alert">{latest.error.message}</p>}
-      {latest.data === null && <p>Aún no hay lecturas.</p>}
-      {latest.data && <LatestCards reading={latest.data} />}
-
-      <section className="history" aria-labelledby="history-title">
-        <h2 id="history-title" className="section-title">
-          Histórico
-        </h2>
-        {history.data === undefined && !history.error && <p>Cargando lecturas…</p>}
-        {history.error && <p role="alert">{history.error.message}</p>}
-        {history.data && (
-          <div className="charts">
-            <ReadingsChart
-              readings={history.data.readings}
-              field="soilMoisture"
-              title="Humedad del sustrato (%)"
-              unit="%"
-              color="#2f6fbf"
-              decimals={1}
-              yDomain={[0, 100]}
-              yTicks={[0, 25, 50, 75, 100]}
-            />
-            {/* De 0 (la noche queda sobre el eje) al máximo redondeado a 5000. */}
-            <ReadingsChart
-              readings={history.data.readings}
-              field="light"
-              title="Luz (lx)"
-              unit="lx"
-              color="#b8860b"
-              yStep={5000}
-            />
-          </div>
-        )}
-      </section>
+      <Header reading={latest.data ?? undefined} connection={connection} />
+      {body}
     </main>
   )
 }
 
-function Header({ reading }: { reading: Reading | undefined }) {
+/**
+ * Estados de una sección alimentada por `usePolling`: cargando, error, vacío o contenido.
+ * `children` es una función (render prop) que recibe los datos ya cargados.
+ */
+function PollSection<T>({
+  poll,
+  isEmpty,
+  onRetry = poll.retry,
+  children,
+}: {
+  poll: PollingResult<T>
+  isEmpty: (data: T) => boolean
+  onRetry?: () => void
+  children: (data: T) => ReactNode
+}) {
+  if (poll.data === undefined) {
+    return poll.error ? (
+      <StatusMessage kind="error" error={poll.error} onRetry={onRetry} />
+    ) : (
+      <StatusMessage kind="loading" />
+    )
+  }
+  if (isEmpty(poll.data)) return <StatusMessage kind="empty" />
+  return <>{children(poll.data)}</>
+}
+
+function StaleNotice({ lastUpdated, onRetry }: { lastUpdated: Date | null; onRetry: () => void }) {
+  return (
+    <div className="stale" role="status">
+      <span>
+        No se pudo actualizar.
+        {lastUpdated && ` Mostrando datos recibidos a las ${formatBogotaTime(lastUpdated.getTime())}.`}
+      </span>
+      <button type="button" className="button button--link" onClick={onRetry}>
+        Reintentar
+      </button>
+    </div>
+  )
+}
+
+type Connection = 'connected' | 'offline' | 'unknown'
+
+function Header({ reading, connection }: { reading: Reading | undefined; connection: Connection }) {
   return (
     <header className="header">
       <div>
@@ -85,7 +156,14 @@ function Header({ reading }: { reading: Reading | undefined }) {
           </p>
         )}
       </div>
-      <span className="badge">Datos simulados</span>
+      <div className="header__status">
+        <span className="badge">Datos simulados</span>
+        {connection !== 'unknown' && (
+          <span className={`connection connection--${connection}`}>
+            {connection === 'connected' ? 'API conectada' : 'Sin conexión'}
+          </span>
+        )}
+      </div>
     </header>
   )
 }

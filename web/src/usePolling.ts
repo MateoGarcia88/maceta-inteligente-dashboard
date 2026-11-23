@@ -8,7 +8,7 @@
  * - Si un refresco falla, se conservan los datos anteriores y se guarda el error.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from './api.ts'
 
 export interface PollingState<T> {
@@ -20,15 +20,29 @@ export interface PollingState<T> {
   lastUpdated: Date | null
 }
 
+export interface PollingResult<T> extends PollingState<T> {
+  /** Borra el error y vuelve a pedir ya, sin esperar al siguiente intervalo. */
+  retry: () => void
+}
+
 export function usePolling<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
   intervalMs: number,
-): PollingState<T> {
+): PollingResult<T> {
   const [state, setState] = useState<PollingState<T>>({
     data: undefined,
     error: null,
     lastUpdated: null,
   })
+  // Cambiar `attempt` reinicia el efecto: limpia el intervalo actual y pide de inmediato.
+  const [attempt, setAttempt] = useState(0)
+
+  // useCallback: `retry` mantiene la misma referencia entre renders.
+  const retry = useCallback(() => {
+    // Sin error y sin datos, la UI vuelve a "Cargando…" mientras llega la respuesta.
+    setState((prev) => ({ ...prev, error: null }))
+    setAttempt((n) => n + 1)
+  }, [])
 
   useEffect(() => {
     // Un AbortController por "vida" del efecto: abortarlo cancela el fetch en curso.
@@ -61,7 +75,8 @@ export function usePolling<T>(
       controller.abort()
       clearInterval(id)
     }
-  }, [fetcher, intervalMs])
+    // `attempt` no se lee dentro del efecto: está en la lista solo para poder reiniciarlo.
+  }, [fetcher, intervalMs, attempt])
 
-  return state
+  return { ...state, retry }
 }

@@ -19,14 +19,25 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * fetch no tiene timeout: una petición colgada no termina nunca y, como usePolling no lanza
+ * otra mientras haya una en curso, el dashboard dejaría de actualizarse.
+ */
+const REQUEST_TIMEOUT_MS = 10_000
+
 /** GET a la API y parseo del JSON. Lanza ApiError si no hay respuesta o si no es 2xx. */
 async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
   let res: Response
   try {
-    res = await fetch(`${API_URL}${path}`, { signal })
+    // Se cancela si lo pide quien llama (signal) o si pasan 10 s, lo que ocurra primero.
+    const combined = AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
+    res = await fetch(`${API_URL}${path}`, { signal: combined })
   } catch (err) {
     // Si nosotros cancelamos la petición, se propaga tal cual (no es un fallo de la API).
     if (signal.aborted) throw err
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new ApiError('TIMEOUT', 0, 'La API tardó demasiado en responder.')
+    }
     // fetch solo rechaza cuando no hay respuesta HTTP: servidor apagado, red o CORS.
     throw new ApiError('NETWORK', 0, 'No se pudo conectar con la API.')
   }
