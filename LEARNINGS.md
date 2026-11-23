@@ -82,8 +82,45 @@ curl.exe http://localhost:3000/api/readings/latest
 curl.exe "http://localhost:3000/api/readings?from=2026-11-20T00:00:00-05:00&to=2026-11-21T00:00:00-05:00"
 ```
 
-### Pendiente
+### Pendiente (API)
 - Confirmar con el equipo del ESP32 las unidades y rangos (todo lo `PROVISIONAL`).
 - Iteración 2: exponer los riegos en `GET /api/waterings` (ya se guardan en memoria).
 - Fórmula del "porcentaje de vida": la define el equipo; no se ha implementado.
 - Opcional: `SIM_START` para datos idénticos entre arranques; `.env` con `--env-file-if-exists`.
+
+---
+
+## 2026-11-22 · Dashboard, etapa 0: esqueleto de `web/`
+
+### Qué se hizo
+- `bun create vite web --template react-ts`; se borró el demo (logos, `App.css`, `index.css`, README).
+- `vite.config.ts`: `server.port: 5173` + `strictPort: true`.
+- `.env.example` (versionado) y `.env.local` (ignorado por `*.local` en `.gitignore`) con `VITE_API_URL`.
+- `src/env.d.ts`: tipo de `import.meta.env.VITE_API_URL`.
+- `src/config.ts`: valida la URL una vez y expone `API_URL`, `CONFIG_ERROR` y `REFRESH_MS`.
+- `App.tsx`: cabecera "Maceta inteligente" + badge "Datos simulados"; si falta la URL, aviso en pantalla.
+- `.claude/launch.json`: cómo arrancar `mock-api` y `web` desde el panel de vista previa de Claude.
+
+### Por qué así
+- **strictPort**: la API solo acepta CORS desde `http://localhost:5173`. Sin strictPort, si el puerto
+  está ocupado Vite salta a 5174 y todas las peticiones fallan por CORS, con un error poco obvio.
+- **Error de configuración en pantalla, no `throw`**: un `throw` al importar deja la página en blanco
+  y el error solo se ve en la consola.
+
+### Conceptos nuevos
+**Variables de entorno en Vite.** Se leen de `.env`, `.env.local`, `.env.[modo]` al arrancar
+(`bun run dev`) y se **incrustan en el código** al compilar: no son secretas. Solo las que empiezan
+por `VITE_` llegan al navegador. Cambiar `.env.local` exige reiniciar el servidor de desarrollo.
+
+**`tsc -b && vite build`.** Vite no revisa tipos (solo los borra, como Node con type stripping);
+por eso el `build` corre primero `tsc -b`.
+
+**oxlint.** La plantilla actual de Vite trae oxlint (linter en Rust, muy rápido) en vez de ESLint.
+
+### Ejemplo mínimo
+```ts
+// src/env.d.ts
+interface ImportMetaEnv { readonly VITE_API_URL?: string }
+// cualquier archivo
+const url = import.meta.env.VITE_API_URL // string | undefined
+```
