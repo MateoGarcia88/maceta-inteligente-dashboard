@@ -21,10 +21,39 @@ const dateTimeFormat = new Intl.DateTimeFormat('es-CO', {
  * `format()` daría "22 de nov de 2026, 12:35"; con `formatToParts` se toman solo las
  * piezas y se arman como en el mockup.
  */
-export function formatBogota(iso: string): string {
+export function formatBogota(instant: string | number): string {
   const parts: Record<string, string> = {}
-  for (const { type, value } of dateTimeFormat.formatToParts(new Date(iso))) parts[type] = value
+  for (const { type, value } of dateTimeFormat.formatToParts(new Date(instant))) parts[type] = value
   // Algunas versiones de ICU abrevian el mes con punto ("nov."): se quita.
   const month = (parts.month ?? '').replace('.', '')
   return `${parts.day} ${month} ${parts.year}, ${parts.hour}:${parts.minute}`
+}
+
+const timeFormat = new Intl.DateTimeFormat('es-CO', {
+  timeZone: TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+/** ms desde 1970 → "16:00" en hora de Bogotá. Para los ticks de los gráficos. */
+export function formatBogotaTime(ms: number): string {
+  return timeFormat.format(ms)
+}
+
+const MS_PER_HOUR = 60 * 60 * 1000
+/** Bogotá está en UTC−5 todo el año (sin horario de verano). */
+const BOGOTA_OFFSET_MS = -5 * MS_PER_HOUR
+
+/**
+ * Instantes entre `minMs` y `maxMs` que caen en horas "redondas" de Bogotá múltiplos de
+ * `stepHours` (con 4: 00:00, 04:00, 08:00…). Así los ticks no quedan en 13:37, 17:37…
+ */
+export function hourTicks(minMs: number, maxMs: number, stepHours: number): number[] {
+  const step = stepHours * MS_PER_HOUR
+  // Se pasa a "hora local en ms", se redondea hacia arriba al múltiplo y se vuelve a UTC.
+  const first = Math.ceil((minMs + BOGOTA_OFFSET_MS) / step) * step - BOGOTA_OFFSET_MS
+  const ticks: number[] = []
+  for (let t = first; t <= maxMs; t += step) ticks.push(t)
+  return ticks
 }

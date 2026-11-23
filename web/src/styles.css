@@ -75,6 +75,24 @@ body {
   font-weight: 400;
 }
 
+.history {
+  margin-top: 32px;
+}
+
+.section-title {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+}
+
+.chart__title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+}
+
+.chart {
+  font-size: 0.8rem;
+}
+
 .config-error {
   color: #b42318;
 }

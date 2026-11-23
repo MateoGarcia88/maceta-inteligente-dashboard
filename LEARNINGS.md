@@ -178,3 +178,51 @@ useEffect(() => {
   return () => { controller.abort(); clearInterval(id) }
 }, [])
 ```
+
+---
+
+## 2026-11-22 · Dashboard, etapa 2: gráfico de humedad de 24 h
+
+### Qué se hizo
+- `bun add recharts` (3.11).
+- `types.ts`: `ReadingsResponse`. `api.ts`: `fetchReadings({ from?, to? }, signal)` con `URLSearchParams`.
+- `time.ts`: `formatBogotaTime(ms)` → "16:00" y `hourTicks(min, max, 4)` → ticks en 00:00, 04:00, 08:00… de Bogotá.
+- `components/ReadingsChart.tsx`: un gráfico de línea genérico (`field`, `title`, `unit`, `color`, `yDomain`).
+- `App.tsx`: segundo `usePolling` con `fetchLast24h` y la sección "Histórico".
+
+### Por qué así
+- **Un componente para los dos gráficos**: humedad y luz solo cambian el campo, la unidad, el
+  color y el eje Y. La etapa 3 es solo usarlo otra vez.
+- **Eje X numérico (`type="number"`, `scale="time"`)**: con strings, Recharts pondría los puntos
+  equidistantes aunque faltaran lecturas; con ms, la distancia en el eje es tiempo real.
+- **Ticks calculados**: con los automáticos, Recharts los pone donde le parece (13:37, 17:37…).
+- **`isAnimationActive={false}`**: cada refresco entrega un arreglo nuevo y la línea se volvería
+  a dibujar animada desde cero cada 30 s.
+- **`useMemo`**: transformar 288 lecturas es barato, pero así `data` conserva la misma referencia
+  entre renders que no cambian las lecturas, y Recharts no recalcula de más.
+
+### Conceptos nuevos
+**Recharts es declarativo.** No se "dibuja" nada: se describe el gráfico con componentes
+(`<LineChart><XAxis/><YAxis/><Line/></LineChart>`) y Recharts genera el SVG.
+`ResponsiveContainer` mide el ancho del padre; necesita una altura fija o un padre con altura.
+
+**`URLSearchParams` codifica.** En `?from=2026-11-22T10:00:00+01:00`, el `+` llegaría al servidor
+como espacio. `params.set('from', valor)` lo convierte en `%2B`. (Con `-05:00` no pasa, pero el
+cliente no debería depender de eso.)
+
+**Zona horaria fija vs. `Intl`.** Para mostrar fechas, `Intl.DateTimeFormat` con `timeZone`; para
+aritmética (ticks), el desfase −5 h basta porque Colombia no cambia de hora.
+
+**Tamaño del bundle.** `vite build` avisa que el JS pasa de 500 kB: es Recharts (+ su dependencia
+d3). Para una app de una sola pantalla no importa; se podría dividir con `import()` dinámico.
+
+### Ejemplo mínimo
+```tsx
+<ResponsiveContainer width="100%" height={260}>
+  <LineChart data={[{ t: 1, v: 10 }, { t: 2, v: 30 }]}>
+    <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} />
+    <YAxis />
+    <Line dataKey="v" dot={false} isAnimationActive={false} />
+  </LineChart>
+</ResponsiveContainer>
+```

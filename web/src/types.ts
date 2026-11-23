@@ -14,6 +14,18 @@ export interface Reading {
   light: number
 }
 
+/** Respuesta de GET /api/readings. */
+export interface ReadingsResponse {
+  /** Inicio y fin del rango que usó la API (UTC). */
+  from: string
+  to: string
+  count: number
+  /** `true` si había más de 5000 lecturas: vienen las 5000 más recientes. */
+  truncated: boolean
+  /** En orden cronológico (la más antigua primero). */
+  readings: Reading[]
+}
+
 /** Cuerpo de las respuestas con error: { "error": { "code": "...", "message": "..." } }. */
 export interface ApiErrorBody {
   error: { code: string; message: string }

@@ -1,5 +1,6 @@
-import { fetchLatest } from './api.ts'
+import { fetchLatest, fetchReadings } from './api.ts'
 import { LatestCards } from './components/LatestCards.tsx'
+import { ReadingsChart } from './components/ReadingsChart.tsx'
 import { CONFIG_ERROR, REFRESH_MS } from './config.ts'
 import { formatBogota } from './time.ts'
 import type { Reading } from './types.ts'
@@ -20,9 +21,13 @@ export default function App() {
   return <Dashboard />
 }
 
+/** Sin `from`/`to`: la API devuelve las 24 h que terminan en la última lectura. */
+const fetchLast24h = (signal: AbortSignal) => fetchReadings({}, signal)
+
 function Dashboard() {
-  // `fetchLatest` es una función de módulo: su referencia no cambia entre renders.
+  // Funciones de módulo: su referencia no cambia entre renders, el efecto no se reinicia.
   const latest = usePolling(fetchLatest, REFRESH_MS)
+  const history = usePolling(fetchLast24h, REFRESH_MS)
 
   return (
     <main className="page">
@@ -33,6 +38,26 @@ function Dashboard() {
       {latest.error && <p role="alert">{latest.error.message}</p>}
       {latest.data === null && <p>Aún no hay lecturas.</p>}
       {latest.data && <LatestCards reading={latest.data} />}
+
+      <section className="history" aria-labelledby="history-title">
+        <h2 id="history-title" className="section-title">
+          Histórico
+        </h2>
+        {history.data === undefined && !history.error && <p>Cargando lecturas…</p>}
+        {history.error && <p role="alert">{history.error.message}</p>}
+        {history.data && (
+          <ReadingsChart
+            readings={history.data.readings}
+            field="soilMoisture"
+            title="Humedad del sustrato (%)"
+            unit="%"
+            color="#2f6fbf"
+            decimals={1}
+            yDomain={[0, 100]}
+            yTicks={[0, 25, 50, 75, 100]}
+          />
+        )}
+      </section>
     </main>
   )
 }

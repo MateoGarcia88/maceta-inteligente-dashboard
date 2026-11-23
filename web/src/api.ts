@@ -4,7 +4,7 @@
  */
 
 import { API_URL } from './config.ts'
-import type { ApiErrorBody, Reading } from './types.ts'
+import type { ApiErrorBody, Reading, ReadingsResponse } from './types.ts'
 
 /** `status` 0 = no hubo respuesta (API apagada, red caída, CORS). */
 export class ApiError extends Error {
@@ -51,4 +51,20 @@ export async function fetchLatest(signal: AbortSignal): Promise<Reading | null> 
     if (err instanceof ApiError && err.code === 'NO_DATA') return null
     throw err
   }
+}
+
+export interface ReadingsRange {
+  /** ISO 8601 con zona. Sin `from`/`to`, la API usa las 24 h que terminan en la última lectura. */
+  from?: string
+  to?: string
+}
+
+/** Lecturas de un rango, en orden cronológico. */
+export function fetchReadings(range: ReadingsRange, signal: AbortSignal): Promise<ReadingsResponse> {
+  // URLSearchParams codifica los valores: el "+" de "+01:00" llegaría como espacio si no.
+  const params = new URLSearchParams()
+  if (range.from) params.set('from', range.from)
+  if (range.to) params.set('to', range.to)
+  const query = params.toString()
+  return getJson<ReadingsResponse>(`/api/readings${query ? `?${query}` : ''}`, signal)
 }
